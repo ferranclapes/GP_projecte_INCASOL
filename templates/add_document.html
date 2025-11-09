@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Document</title>
+</head>
+<body>
+    <h1>Add New Document</h1>
+    <form action="{{ url_for('add_document') }}" method="post" enctype="multipart/form-data">
+        <label for="name">Document Name:</label><br>
+        <input type="text" id="name" name="name" required><br><br>
+        
+        <label for="durationType">Duration Type:</label><br>
+        <select name="durationType" id="durationType" required>
+            <option value="working_days">Working Days</option>
+            <option value="natural_days">Natural Days</option>
+            <option value="months">Months</option>
+        </select><br><br>
+
+        <label for="duration">Duration:</label><br>
+        <input type="number" id="duration" name="duration" required><br><br>
+        
+        <label for="town">Town Calendar:</label><br>
+        <select name="town" id="town" required>
+            <option value="">--Please choose a calendar--</option>
+            {% for calendar in calendars %}
+                <option value="{{ calendar }}">{{ calendar }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <label for="file">Document File (PDF):</label><br>
+        <input type="file" name="file" id="file" accept=".pdf"><br><br>
+
+        <input type="submit" value="Add Document">
+    </form>
+    <a href="{{ url_for('index') }}">Back to Document List</a>
+</body>
+</html>

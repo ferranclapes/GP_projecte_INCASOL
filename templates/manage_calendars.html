@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Calendars</title>
+    <style>
+        body { font-family: sans-serif; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>Manage Holiday Calendars</h1>
+
+    <h2>Create New Calendar</h2>
+    <form action="{{ url_for('create_calendar') }}" method="post">
+        <label for="town">Town Name:</label>
+        <input type="text" id="town" name="town" required>
+        <input type="submit" value="Create Calendar">
+    </form>
+
+    <hr style="margin: 2em 0;">
+
+    <h2>Existing Calendars</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Calendar Name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for calendar in calendars %}
+            <tr>
+                <td>{{ calendar }}</td>
+                <td>
+                    <a href="{{ url_for('edit_calendar', town_name=calendar) }}">Manage</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <br>
+    <a href="{{ url_for('index') }}">Back to Document List</a>
+</body>
+</html>

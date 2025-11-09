@@ -1,0 +1,9 @@
+@echo off
+echo Activating virtual environment...
+call venv\Scripts\activate.bat
+
+echo Installing dependencies...
+pip install -r requirements.txt
+
+echo Starting the application...
+python app.py

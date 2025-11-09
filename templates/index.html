@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Tracker</title>
+    <style>
+        body { font-family: sans-serif; }
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            color: #a94442;
+            background-color: #f2dede;
+            border-color: #ebccd1;
+        }
+        .expired-row {
+            background-color: #f2dede;
+            font-weight: bold;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>Document Tracker</h1>
+
+    {% if alerts %}
+    <div class="alerts">
+        <h2>Alerts</h2>
+        {% for alert in alerts %}
+            <div class="alert">
+                <strong>Expired:</strong> The document "{{ alert.name }}" expired on {{ alert.endDate }}.
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <a href="{{ url_for('add_document') }}">Add New Document</a> | 
+    <a href="{{ url_for('manage_calendars') }}">Manage Calendars</a> |
+    <a href="{{ url_for('upload_holidays') }}">Upload Calendar File</a>
+    <br><br>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Town</th>
+                <th>File</th>
+                <th>Start Date</th>
+                <th>Duration</th>
+                <th>End Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for doc in documents %}
+            <tr class="{{ 'expired-row' if doc.status == 'Expired' else '' }}">
+                <td>{{ doc.name }}</td>
+                <td>{{ doc.town | default('N/A') }}</td>
+                <td>
+                    {% if doc.filename %}
+                        <a href="{{ url_for('uploaded_file', filename=doc.filename) }}" target="_blank">View PDF</a>
+                    {% else %}
+                        No File
+                    {% endif %}
+                </td>
+                <td>{{ doc.startDate }}</td>
+                <td>{{ doc.duration }} {{ doc.durationType.replace('_', ' ') | title }}</td>
+                <td>{{ doc.endDate }}</td>
+                <td>{{ doc.status }}</td>
+                <td>
+                    <a href="{{ url_for('delete_document', doc_id=doc.id) }}" 
+                       onclick="return confirm('Are you sure you want to delete this document?');">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

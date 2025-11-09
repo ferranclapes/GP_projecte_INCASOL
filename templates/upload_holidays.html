@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Holidays</title>
+    <style>
+        body { font-family: sans-serif; }
+    </style>
+</head>
+<body>
+    <h1>Upload Holiday Calendar (.ics)</h1>
+    <form action="{{ url_for('upload_holidays') }}" method="post" enctype="multipart/form-data">
+        <label for="town">Town Name:</label><br>
+        <input type="text" id="town" name="town" required><br><br>
+        <label for="file">Calendar File (.ics):</label><br>
+        <input type="file" name="file" id="file" accept=".ics" required>
+        <br><br>
+        <input type="submit" value="Upload">
+    </form>
+    <br>
+    <a href="{{ url_for('index') }}">Back to Document List</a>
+</body>
+</html>
