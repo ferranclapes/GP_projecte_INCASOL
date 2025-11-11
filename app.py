@@ -8,10 +8,12 @@ from datetime import date, timedelta, datetime
 from apscheduler.schedulers.background import BackgroundScheduler
 from werkzeug.utils import secure_filename
 from dateutil.relativedelta import relativedelta
+from fpdf import FPDF
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'  # Needed for flashing messages
 app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['CERTIFICATE_FOLDER'] = 'certificates'
 
 def load_documents():
     try:
@@ -23,6 +25,43 @@ def load_documents():
 def save_documents(documents):
     with open('data.json', 'w') as f:
         json.dump(documents, f, indent=4)
+
+def load_config():
+    try:
+        with open('config.json', 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {'auto_delete_expired': False}
+
+def save_config(config):
+    with open('config.json', 'w') as f:
+        json.dump(config, f, indent=4)
+
+def generate_certificate(doc):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", size=24)
+    
+    pdf.cell(200, 10, txt="Certificat d'Exposició Pública", ln=True, align='C')
+    pdf.ln(10)
+    
+    pdf.set_font("Arial", size=12)
+    pdf.multi_cell(0, 10, f"Aquest document certifica que el document: '{doc['name']}' ha estat en exposició pública a la web de INCASOL durant el següent període:")
+    pdf.ln(5)
+
+    pdf.cell(0, 10, f"Data d'inici: {doc['startDate']}", ln=True)
+    pdf.cell(0, 10, f"Data de finalització: {doc['endDate']}", ln=True)
+    pdf.cell(0, 10, f"Durada: {doc['duration']} {doc['durationType'].replace('_', ' ')}", ln=True)
+    pdf.ln(10)
+
+    pdf.cell(0, 10, f"Certificat generat el: {date.today().isoformat()}", ln=True)
+
+    if not os.path.exists(app.config['CERTIFICATE_FOLDER']):
+        os.makedirs(app.config['CERTIFICATE_FOLDER'])
+        
+    cert_filename = f"cert_{doc['name']}.pdf"
+    pdf.output(os.path.join(app.config['CERTIFICATE_FOLDER'], cert_filename))
+    print(f"Generated certificate: {cert_filename}")
 
 def load_holidays_from_ics(town_name):
     holidays = set()
@@ -86,22 +125,33 @@ def calculate_end_date(start_date, duration, duration_type, town_name):
 
 def check_expired_documents():
     with app.app_context():
+        config = load_config()
         documents = load_documents()
         today = date.today()
+        
+        docs_to_keep = []
+        
         for doc in documents:
-            if doc['status'] == 'Active':
-                end_date = date.fromisoformat(doc['endDate'])
-                print(f"Checking document: {doc['name']} with end date {doc['endDate']}")
-                if end_date < today:
-                    print(f"Document expired: {doc['name']}")
+            end_date = date.fromisoformat(doc['endDate'])
+            if end_date < today:
+                print(f"Document expired: {doc['name']}")
+                if config.get('auto_delete_expired', False):
+                    generate_certificate(doc)
+                    if doc.get('filename'):
+                        try:
+                            os.remove(os.path.join(app.config['UPLOAD_FOLDER'], doc['filename']))
+                            print(f"Deleted file: {doc['filename']}")
+                        except FileNotFoundError:
+                            print(f"File not found for deletion: {doc['filename']}")
+                    # Don't add to docs_to_keep to effectively delete it
+                else:
                     doc['status'] = 'Expired'
-                    # Notify
-                    # subject = f"Document Expired: {doc['name']}"
-                    # body = f"The document '{doc['name']}' has expired on {doc['endDate']}."
-                    # to_email = os.environ.get('RECIPIENT_EMAIL')
-                    # if to_email:
-                    #     send_email(subject, body, to_email)
-        save_documents(documents)
+                    docs_to_keep.append(doc)
+            else:
+                doc['status'] = 'Active'
+                docs_to_keep.append(doc)
+        
+        save_documents(docs_to_keep)
 
 @app.route('/')
 def index():
@@ -169,14 +219,17 @@ def delete_document(doc_id):
     
     doc_to_delete = next((doc for doc in documents if doc.get('id') == doc_id), None)
     
-    if doc_to_delete and doc_to_delete.get('filename'):
-        try:
-            os.remove(os.path.join(app.config['UPLOAD_FOLDER'], doc_to_delete['filename']))
-        except FileNotFoundError:
-            pass # File was already deleted or never existed
+    if doc_to_delete:
+        generate_certificate(doc_to_delete)
+        if doc_to_delete.get('filename'):
+            try:
+                os.remove(os.path.join(app.config['UPLOAD_FOLDER'], doc_to_delete['filename']))
+            except FileNotFoundError:
+                pass # File was already deleted or never existed
 
     documents = [doc for doc in documents if doc.get('id') != doc_id]
     save_documents(documents)
+    flash('Document deleted and certificate generated.')
     return redirect(url_for('index'))
 
 @app.route('/uploads/<filename>')
@@ -277,6 +330,17 @@ def add_holiday(town_name):
 
     flash('Holiday added successfully.')
     return redirect(url_for('edit_calendar', town_name=town_name))
+
+@app.route('/settings', methods=['GET', 'POST'])
+def settings():
+    config = load_config()
+    if request.method == 'POST':
+        config['auto_delete_expired'] = 'auto_delete' in request.form
+        save_config(config)
+        flash('Settings saved successfully.')
+        return redirect(url_for('settings'))
+    
+    return render_template('settings.html', auto_delete_expired=config.get('auto_delete_expired', False))
 
 @app.route('/delete-holiday/<town_name>/<holiday_uid>')
 def delete_holiday(town_name, holiday_uid):

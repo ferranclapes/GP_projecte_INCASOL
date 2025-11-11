@@ -2,3 +2,4 @@ Flask
 APScheduler
 ics
 python-dateutil
+fpdf2

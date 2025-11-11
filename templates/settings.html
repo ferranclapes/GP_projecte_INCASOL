@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings</title>
+    <style>
+        body { font-family: sans-serif; }
+    </style>
+</head>
+<body>
+    <h1>Settings</h1>
+    <form action="{{ url_for('settings') }}" method="post">
+        <label>
+            <input type="checkbox" name="auto_delete" {% if auto_delete_expired %}checked{% endif %}>
+            Automatically delete expired documents
+        </label>
+        <br><br>
+        <input type="submit" value="Save Settings">
+    </form>
+    <br>
+    <a href="{{ url_for('index') }}">Back to Document List</a>
+</body>
+</html>
