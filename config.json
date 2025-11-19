@@ -1,3 +1,6 @@
 {
-    "auto_delete_expired": true
+    "auto_delete_expired": true,
+    "year_counters": {
+        "2025": 4
+    }
 }

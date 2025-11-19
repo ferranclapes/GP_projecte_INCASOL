@@ -37,16 +37,49 @@ def save_config(config):
     with open('config.json', 'w') as f:
         json.dump(config, f, indent=4)
 
+def generate_doc_id():
+    config = load_config()
+    current_year = date.today().year
+    
+    # Get the counter for the current year
+    year_counters = config.get('year_counters', {})
+    current_counter = year_counters.get(str(current_year), 0)
+    
+    # Increment the counter
+    new_counter = current_counter + 1
+    
+    # Update the config
+    year_counters[str(current_year)] = new_counter
+    config['year_counters'] = year_counters
+    save_config(config)
+    
+    # Format the new ID
+    return f"{new_counter}_{current_year}"
+
 def generate_certificate(doc):
     pdf = FPDF()
     pdf.add_page()
+
+    # Add logo
+    if os.path.exists('Logo_INCASOL.png'):
+        pdf.image('Logo_INCASOL.png', x=10, y=8, w=30)
+    else:
+        print("Logo not found, skipping.")
+
+    # Add document ID to the top right
+    pdf.set_y(15)
+    pdf.set_font("Arial", "", size=10)
+    pdf.cell(0, 10, f"Expedient num: {doc['id']}", 0, 0, 'R')
+
+    pdf.ln(20)  # Move down to leave space
+
     pdf.set_font("Arial", "B", size=24)
     
     pdf.cell(200, 10, txt="Certificat d'Exposició Pública", ln=True, align='C')
     pdf.ln(10)
     
     pdf.set_font("Arial", size=12)
-    pdf.multi_cell(0, 10, f"Aquest document certifica que el document: '{doc['name']}' ha estat en exposició pública a la web de INCASOL durant el següent període:")
+    pdf.multi_cell(0, 10, f"Aquest document certifica que el document: '{doc['name']}' ha estat en exposició pública al Portal de transparència de INCASÒL, accessible al web https://incasol.gencat.cat/ca/1-incasol/nou-portal-transparencia/, durant el termini següent: ")
     pdf.ln(5)
 
     pdf.cell(0, 10, f"Data d'inici: {doc['startDate']}", ln=True)
@@ -188,7 +221,7 @@ def add_document():
         startDate = date.today()
         endDate = calculate_end_date(startDate, duration, duration_type, town)
         
-        doc_id = str(uuid.uuid4())
+        doc_id = generate_doc_id()
         filename = None
 
         if 'file' in request.files:
