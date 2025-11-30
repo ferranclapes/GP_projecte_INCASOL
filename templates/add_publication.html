@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Document</title>
+    <title>Add Publication</title>
 </head>
 <body>
-    <h1>Add New Document</h1>
-    <form action="{{ url_for('add_document') }}" method="post" enctype="multipart/form-data">
-        <label for="name">Document Name:</label><br>
+    <h1>Add New Publication</h1>
+    <form action="{{ url_for('add_publication') }}" method="post" enctype="multipart/form-data">
+        <label for="name">Publication Name:</label><br>
         <input type="text" id="name" name="name" required><br><br>
         
         <label for="durationType">Duration Type:</label><br>
@@ -32,8 +32,8 @@
         <label for="file">Document File (PDF):</label><br>
         <input type="file" name="file" id="file" accept=".pdf"><br><br>
 
-        <input type="submit" value="Add Document">
+        <input type="submit" value="Add Publication">
     </form>
-    <a href="{{ url_for('index') }}">Back to Document List</a>
+    <a href="{{ url_for('index') }}">Back to Publication List</a>
 </body>
 </html>

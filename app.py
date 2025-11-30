@@ -15,16 +15,16 @@ app.secret_key = 'supersecretkey'  # Needed for flashing messages
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['CERTIFICATE_FOLDER'] = 'certificates'
 
-def load_documents():
+def load_publications():
     try:
         with open('data.json', 'r') as f:
             return json.load(f)
     except FileNotFoundError:
         return []
 
-def save_documents(documents):
+def save_publications(publications):
     with open('data.json', 'w') as f:
-        json.dump(documents, f, indent=4)
+        json.dump(publications, f, indent=4)
 
 def load_config():
     try:
@@ -37,7 +37,7 @@ def save_config(config):
     with open('config.json', 'w') as f:
         json.dump(config, f, indent=4)
 
-def generate_doc_id():
+def generate_pub_id():
     config = load_config()
     current_year = date.today().year
     
@@ -56,7 +56,7 @@ def generate_doc_id():
     # Format the new ID
     return f"{new_counter}_{current_year}"
 
-def generate_certificate(doc):
+def generate_certificate(publication):
     pdf = FPDF()
     pdf.add_page()
 
@@ -66,10 +66,10 @@ def generate_certificate(doc):
     else:
         print("Logo not found, skipping.")
 
-    # Add document ID to the top right
+    # Add publication ID to the top right
     pdf.set_y(15)
     pdf.set_font("Arial", "", size=10)
-    pdf.cell(0, 10, f"Expedient num: {doc['id']}", 0, 0, 'R')
+    pdf.cell(0, 10, f"Expedient num: {publication['id']}", 0, 0, 'R')
 
     pdf.ln(20)  # Move down to leave space
 
@@ -79,12 +79,12 @@ def generate_certificate(doc):
     pdf.ln(10)
     
     pdf.set_font("Arial", size=12)
-    pdf.multi_cell(0, 10, f"Aquest document certifica que el document: '{doc['name']}' ha estat en exposició pública al Portal de transparència de INCASÒL, accessible al web https://incasol.gencat.cat/ca/1-incasol/nou-portal-transparencia/, durant el termini següent: ")
+    pdf.multi_cell(0, 10, f"Aquest document certifica que la publicació: '{publication['name']}' ha estat en exposició pública al Portal de transparència de INCASÒL, accessible al web https://incasol.gencat.cat/ca/1-incasol/nou-portal-transparencia/, durant el termini següent: ")
     pdf.ln(5)
 
-    pdf.cell(0, 10, f"Data d'inici: {doc['startDate']}", ln=True)
-    pdf.cell(0, 10, f"Data de finalització: {doc['endDate']}", ln=True)
-    pdf.cell(0, 10, f"Durada: {doc['duration']} {doc['durationType'].replace('_', ' ')}", ln=True)
+    pdf.cell(0, 10, f"Data d'inici: {publication['startDate']}", ln=True)
+    pdf.cell(0, 10, f"Data de finalització: {publication['endDate']}", ln=True)
+    pdf.cell(0, 10, f"Durada: {publication['duration']} {publication['durationType'].replace('_', ' ')}", ln=True)
     pdf.ln(10)
 
     pdf.cell(0, 10, f"Certificat generat el: {date.today().isoformat()}", ln=True)
@@ -92,7 +92,7 @@ def generate_certificate(doc):
     if not os.path.exists(app.config['CERTIFICATE_FOLDER']):
         os.makedirs(app.config['CERTIFICATE_FOLDER'])
         
-    cert_filename = f"cert_{doc['name']}.pdf"
+    cert_filename = f"cert_{publication['name']}.pdf"
     pdf.output(os.path.join(app.config['CERTIFICATE_FOLDER'], cert_filename))
     print(f"Generated certificate: {cert_filename}")
 
@@ -156,54 +156,54 @@ def calculate_end_date(start_date, duration, duration_type, town_name):
 #     except Exception as e:
 #         print(f"Failed to send email: {e}")
 
-def check_expired_documents():
+def check_expired_publications():
     with app.app_context():
         config = load_config()
-        documents = load_documents()
+        publications = load_publications()
         today = date.today()
         
-        docs_to_keep = []
+        pubs_to_keep = []
         
-        for doc in documents:
-            end_date = date.fromisoformat(doc['endDate'])
+        for publication in publications:
+            end_date = date.fromisoformat(publication['endDate'])
             if end_date < today:
-                print(f"Document expired: {doc['name']}")
+                print(f"Publication expired: {publication['name']}")
                 if config.get('auto_delete_expired', False):
-                    generate_certificate(doc)
-                    if doc.get('filename'):
+                    generate_certificate(publication)
+                    if publication.get('filename'):
                         try:
-                            os.remove(os.path.join(app.config['UPLOAD_FOLDER'], doc['filename']))
-                            print(f"Deleted file: {doc['filename']}")
+                            os.remove(os.path.join(app.config['UPLOAD_FOLDER'], publication['filename']))
+                            print(f"Deleted file: {publication['filename']}")
                         except FileNotFoundError:
-                            print(f"File not found for deletion: {doc['filename']}")
-                    # Don't add to docs_to_keep to effectively delete it
+                            print(f"File not found for deletion: {publication['filename']}")
+                    # Don't add to pubs_to_keep to effectively delete it
                 else:
-                    doc['status'] = 'Expired'
-                    docs_to_keep.append(doc)
+                    publication['status'] = 'Expired'
+                    pubs_to_keep.append(publication)
             else:
-                doc['status'] = 'Active'
-                docs_to_keep.append(doc)
+                publication['status'] = 'Active'
+                pubs_to_keep.append(publication)
         
-        save_documents(docs_to_keep)
+        save_publications(pubs_to_keep)
 
 @app.route('/')
 def index():
-    documents = load_documents()
+    publications = load_publications()
     today = date.today()
-    expired_docs = []
-    active_docs = []
-    for doc in documents:
-        end_date = date.fromisoformat(doc['endDate'])
+    expired_pubs = []
+    active_pubs = []
+    for publication in publications:
+        end_date = date.fromisoformat(publication['endDate'])
         if end_date < today:
-            doc['status'] = 'Expired'
-            expired_docs.append(doc)
+            publication['status'] = 'Expired'
+            expired_pubs.append(publication)
         else:
-            doc['status'] = 'Active'
-            active_docs.append(doc)
+            publication['status'] = 'Active'
+            active_pubs.append(publication)
     
     # Combine lists for the main table, but keep expired ones separate for alerts
-    all_documents = expired_docs + active_docs
-    return render_template('index.html', documents=all_documents, alerts=expired_docs)
+    all_publications = expired_pubs + active_pubs
+    return render_template('index.html', publications=all_publications, alerts=expired_pubs)
 
 def get_available_calendars():
     if not os.path.exists('calendars'):
@@ -211,7 +211,7 @@ def get_available_calendars():
     return [os.path.splitext(f)[0] for f in os.listdir('calendars') if f.endswith('.ics')]
 
 @app.route('/add', methods=['GET', 'POST'])
-def add_document():
+def add_publication():
     calendars = get_available_calendars()
     if request.method == 'POST':
         name = request.form['name']
@@ -221,18 +221,18 @@ def add_document():
         startDate = date.today()
         endDate = calculate_end_date(startDate, duration, duration_type, town)
         
-        doc_id = generate_doc_id()
+        pub_id = generate_pub_id()
         filename = None
 
         if 'file' in request.files:
             file = request.files['file']
             if file and file.filename != '' and file.filename.endswith('.pdf'):
-                filename = doc_id + '.pdf'
+                filename = pub_id + '.pdf'
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
-        documents = load_documents()
-        documents.append({
-            'id': doc_id,
+        publications = load_publications()
+        publications.append({
+            'id': pub_id,
             'name': name,
             'startDate': startDate.isoformat(),
             'duration': duration,
@@ -242,27 +242,27 @@ def add_document():
             'town': town,
             'filename': filename
         })
-        save_documents(documents)
+        save_publications(publications)
         return redirect(url_for('index'))
-    return render_template('add_document.html', calendars=calendars)
+    return render_template('add_publication.html', calendars=calendars)
 
-@app.route('/delete/<doc_id>')
-def delete_document(doc_id):
-    documents = load_documents()
+@app.route('/delete/<pub_id>')
+def delete_publication(pub_id):
+    publications = load_publications()
     
-    doc_to_delete = next((doc for doc in documents if doc.get('id') == doc_id), None)
+    pub_to_delete = next((pub for pub in publications if pub.get('id') == pub_id), None)
     
-    if doc_to_delete:
-        generate_certificate(doc_to_delete)
-        if doc_to_delete.get('filename'):
+    if pub_to_delete:
+        generate_certificate(pub_to_delete)
+        if pub_to_delete.get('filename'):
             try:
-                os.remove(os.path.join(app.config['UPLOAD_FOLDER'], doc_to_delete['filename']))
+                os.remove(os.path.join(app.config['UPLOAD_FOLDER'], pub_to_delete['filename']))
             except FileNotFoundError:
                 pass # File was already deleted or never existed
 
-    documents = [doc for doc in documents if doc.get('id') != doc_id]
-    save_documents(documents)
-    flash('Document deleted and certificate generated.')
+    publications = [pub for pub in publications if pub.get('id') != pub_id]
+    save_publications(publications)
+    flash('Publication deleted and certificate generated.')
     return redirect(url_for('index'))
 
 @app.route('/uploads/<filename>')
@@ -404,6 +404,6 @@ def delete_holiday(town_name, holiday_uid):
 
 if __name__ == '__main__':
     scheduler = BackgroundScheduler()
-    scheduler.add_job(func=check_expired_documents, trigger="interval", seconds=30)
+    scheduler.add_job(func=check_expired_publications, trigger="interval", seconds=30)
     scheduler.start()
     app.run(debug=True)
